@@ -40,7 +40,7 @@ public class GCMIntentService extends GCMBaseIntentService {
 
 			// Send this JSON data to the JavaScript application above EVENT should be set to the msg type
 			// In this case this is the registration ID
-			PushPlugin.sendJavascript( json );
+			GameThrive.sendJavascript( json );
 
 		}
 		catch( JSONException e)
@@ -64,9 +64,9 @@ public class GCMIntentService extends GCMBaseIntentService {
 		if (extras != null)
 		{
 			// if we are in the foreground, just surface the payload, else post it to the statusbar
-            if (PushPlugin.isInForeground()) {
+            if (GameThrive.isInForeground()) {
 				extras.putBoolean("foreground", true);
-                PushPlugin.sendExtras(extras);
+                GameThrive.sendExtras(extras);
 			}
 			else {
 				extras.putBoolean("foreground", false);

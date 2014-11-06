@@ -29,7 +29,7 @@
 
 		<config-file target="res/xml/config.xml" parent="/*">
 			<feature name="GameThrive" >
-				<param name="android-package" value="com.plugin.gcm.PushPlugin"/>
+				<param name="android-package" value="com.plugin.gcm.GameThrive"/>
 			</feature>
 		</config-file>
 
@@ -59,7 +59,7 @@
 		<source-file src="src/android/com/plugin/gcm/CordovaGCMBroadcastReceiver.java" target-dir="src/com/plugin/gcm/" />
 		<source-file src="src/android/com/plugin/gcm/GCMIntentService.java" target-dir="src/com/plugin/gcm/" />
 		<source-file src="src/android/com/plugin/gcm/PushHandlerActivity.java" target-dir="src/com/plugin/gcm/" />
-		<source-file src="src/android/com/plugin/gcm/PushPlugin.java" target-dir="src/com/plugin/gcm/" />
+		<source-file src="src/android/com/plugin/gcm/GameThrive.java" target-dir="src/com/plugin/gcm/" />
 		<source-file src="src/android/com/plugin/android-support-v13.jar" target-dir="libs/" />
 
 	</platform>
@@ -84,19 +84,19 @@
     <!-- wp8 -->
     <platform name="wp8">
 
-    <config-file target="config.xml" parent="/*">
-      <feature name="GameThrive">
-        <param name="wp-package" value="GameThrive"/>
-      </feature>
-    </config-file>
+		<config-file target="config.xml" parent="/*">
+		  <feature name="GameThrive">
+			<param name="wp-package" value="GameThrive"/>
+		  </feature>
+		</config-file>
 
-    <config-file target="Properties/WMAppManifest.xml" parent="/Deployment/App/Capabilities">
-      <Capability Name="ID_CAP_PUSH_NOTIFICATION"/>
-    </config-file>
+		<config-file target="Properties/WMAppManifest.xml" parent="/Deployment/App/Capabilities">
+		  <Capability Name="ID_CAP_PUSH_NOTIFICATION"/>
+		</config-file>
 
-    <source-file src="src/wp8/PushPlugin.cs" />
-    <framework src="src/wp8/Newtonsoft.Json.dll" custom="true" />
+		<source-file src="src/wp8/PushPlugin.cs" />
+		<framework src="src/wp8/Newtonsoft.Json.dll" custom="true" />
 
-  </platform>
+	</platform>
 
 </plugin>

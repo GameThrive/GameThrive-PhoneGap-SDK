@@ -1,4 +1,4 @@
-# Cordova Push Notifications Plugin for Android, iOS, and WP8 that works with GameThrive push notifications.
+# GameThrive Push Notifications for Cordova/PhoneGap.
 
 ## DESCRIPTION
 

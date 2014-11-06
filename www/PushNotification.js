@@ -16,7 +16,7 @@ PushNotification.prototype.register = function(successCallback, errorCallback, o
         return
     }
 
-    cordova.exec(successCallback, errorCallback, "PushPlugin", "register", [options]);
+    cordova.exec(successCallback, errorCallback, "GameThrive", "register", [options]);
 };
 
 // Call this to unregister for push notifications
@@ -33,7 +33,7 @@ PushNotification.prototype.unregister = function(successCallback, errorCallback,
         return
     }
 
-     cordova.exec(successCallback, errorCallback, "PushPlugin", "unregister", [options]);
+     cordova.exec(successCallback, errorCallback, "GameThrive", "unregister", [options]);
 };
 
     // Call this if you want to show toast notification on WP8
@@ -45,7 +45,7 @@ PushNotification.prototype.unregister = function(successCallback, errorCallback,
             return
         }
 
-        cordova.exec(successCallback, errorCallback, "PushPlugin", "showToastNotification", [options]);
+        cordova.exec(successCallback, errorCallback, "GameThrive", "showToastNotification", [options]);
     }
 // Call this to set the application icon badge
 PushNotification.prototype.setApplicationIconBadgeNumber = function(successCallback, errorCallback, badge) {
@@ -61,7 +61,7 @@ PushNotification.prototype.setApplicationIconBadgeNumber = function(successCallb
         return
     }
 
-    cordova.exec(successCallback, errorCallback, "PushPlugin", "setApplicationIconBadgeNumber", [{badge: badge}]);
+    cordova.exec(successCallback, errorCallback, "GameThrive", "setApplicationIconBadgeNumber", [{badge: badge}]);
 };
 
 //-------------------------------------------------------------------
