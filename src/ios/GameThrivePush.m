@@ -23,9 +23,9 @@
  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "PushPlugin.h"
+#import "GameThrivePush.h"
 
-@implementation PushPlugin
+@implementation GameThrivePush
 
 @synthesize notificationMessage;
 @synthesize isInline;
@@ -114,7 +114,7 @@
     self.callback = [options objectForKey:@"ecb"];
 
     if (notificationTypes == UIRemoteNotificationTypeNone)
-        NSLog(@"PushPlugin.register: Push notification type is set to none");
+        NSLog(@"GameThrivePush.register: Push notification type is set to none");
 
     isInline = NO;
 
@@ -137,7 +137,7 @@
 /*
 - (void)isEnabled:(NSMutableArray *)arguments withDict:(NSMutableDictionary *)options {
     UIRemoteNotificationType type = [[UIApplication sharedApplication] enabledRemoteNotificationTypes];
-    NSString *jsStatement = [NSString stringWithFormat:@"navigator.PushPlugin.isEnabled = %d;", type != UIRemoteNotificationTypeNone];
+    NSString *jsStatement = [NSString stringWithFormat:@"navigator.GameThrivePush.isEnabled = %d;", type != UIRemoteNotificationTypeNone];
     NSLog(@"JSStatement %@",jsStatement);
 }
 */

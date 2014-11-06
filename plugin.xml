@@ -4,20 +4,19 @@
     id="com.gamethrive.plugins.GameThrive"
     version="1.0.0">
 
-  <name>GameThrive</name>
+  <name>GameThrive Push Notifications</name>
 	<author>Bob Easterday</author>
 
 	<description>
-		This plugin allows your application to receive push notifications on Android, iOS, and WP8 devices.
-    Android uses Google Cloud Messaging.
-    iOS uses Apple APNS Notifications.
-    WP8 uses Microsoft MPNS Notifications..
+		GameThrive Push Notifications for iOS, Android, and WP8.
 	</description>
+
+	<keywords>GameThrive,push,notification,pushnotification,pushnotifications,retention,userretention,messages</keywords>
 
 	<license>MIT</license>
 
-	<js-module src="www/PushNotification.js" name="PushNotification">
-        <clobbers target="PushNotification" />
+	<js-module src="www/GameThrive.js" name="GameThrive">
+        <clobbers target="GameThrive" />
 	</js-module>
 
 	<engines>
@@ -28,8 +27,8 @@
 	<platform name="android">
 
 		<config-file target="res/xml/config.xml" parent="/*">
-			<feature name="GameThrive" >
-				<param name="android-package" value="com.plugin.gcm.GameThrive"/>
+			<feature name="GameThrivePush" >
+				<param name="android-package" value="com.plugin.gcm.GameThrivePush"/>
 			</feature>
 		</config-file>
 
@@ -59,7 +58,7 @@
 		<source-file src="src/android/com/plugin/gcm/CordovaGCMBroadcastReceiver.java" target-dir="src/com/plugin/gcm/" />
 		<source-file src="src/android/com/plugin/gcm/GCMIntentService.java" target-dir="src/com/plugin/gcm/" />
 		<source-file src="src/android/com/plugin/gcm/PushHandlerActivity.java" target-dir="src/com/plugin/gcm/" />
-		<source-file src="src/android/com/plugin/gcm/GameThrive.java" target-dir="src/com/plugin/gcm/" />
+		<source-file src="src/android/com/plugin/gcm/GameThrivePush.java" target-dir="src/com/plugin/gcm/" />
 		<source-file src="src/android/com/plugin/android-support-v13.jar" target-dir="libs/" />
 
 	</platform>
@@ -68,16 +67,16 @@
 	<platform name="ios">
 
 		<config-file target="config.xml" parent="/*">
-			<feature name="GameThrive">
-				<param name="ios-package" value="GameThrive"/>
+			<feature name="GameThrivePush">
+				<param name="ios-package" value="GameThrivePush"/>
 			</feature>
 		</config-file>
 
 		<source-file src="src/ios/AppDelegate+notification.m" />
-		<source-file src="src/ios/PushPlugin.m" />
+		<source-file src="src/ios/GameThrivePush.m" />
 
 		<header-file src="src/ios/AppDelegate+notification.h" />
-		<header-file src="src/ios/PushPlugin.h" />
+		<header-file src="src/ios/GameThrivePush.h" />
 
 	</platform>
 
@@ -85,8 +84,8 @@
     <platform name="wp8">
 
 		<config-file target="config.xml" parent="/*">
-		  <feature name="GameThrive">
-			<param name="wp-package" value="GameThrive"/>
+		  <feature name="GameThrivePush">
+			<param name="wp-package" value="GameThrivePush"/>
 		  </feature>
 		</config-file>
 
@@ -94,7 +93,7 @@
 		  <Capability Name="ID_CAP_PUSH_NOTIFICATION"/>
 		</config-file>
 
-		<source-file src="src/wp8/PushPlugin.cs" />
+		<source-file src="src/wp8/GameThrivePush.cs" />
 		<framework src="src/wp8/Newtonsoft.Json.dll" custom="true" />
 
 	</platform>

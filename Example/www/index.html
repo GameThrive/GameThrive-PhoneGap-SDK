@@ -18,10 +18,10 @@ NOTE:
         <!--<script type="text/javascript" charset="utf-8" src="cordova-2.2.0.js"></script>-->
         <script type="text/javascript" charset="utf-8" src="phonegap.js"></script>
         <script type="text/javascript" charset="utf-8" src="jquery_1.5.2.min.js"></script>
-        <script type="text/javascript" src="PushNotification.js"></script>
+        <script type="text/javascript" src="GameThrive.js"></script>
         
         <script type="text/javascript">
-            var pushNotification;
+            var gameThrive;
             
             function onDeviceReady() {
                 $("#app-status-ul").append('<li>deviceready event received</li>');
@@ -33,7 +33,7 @@ NOTE:
       				if( $("#home").length > 0)
 					{
 						// call this to get a new token each time. don't call it to reuse existing token.
-						//pushNotification.unregister(successHandler, errorHandler);
+						//gameThrive.unregister(successHandler, errorHandler);
 						e.preventDefault();
 						navigator.app.exitApp();
 					}
@@ -45,13 +45,12 @@ NOTE:
 			
 				try 
 				{ 
-                	pushNotification = window.plugins.pushNotification;
+                	gameThrive = window.plugins.GameThrive;
 		      $("#app-status-ul").append('<li>registering ' + device.platform + '</li>');
-                	if (device.platform == 'android' || device.platform == 'Android' ||
-                            device.platform == 'amazon-fireos' ) {
-			pushNotification.register(successHandler, errorHandler, {"senderID":"661780372179","ecb":"onNotification"});		// required!
+                	if (device.platform == 'android' || device.platform == 'Android') {
+			gameThrive.register(successHandler, errorHandler, {"senderID":"661780372179","ecb":"onNotification"});		// required!
 					} else {
-                    	pushNotification.register(tokenHandler, errorHandler, {"badge":"true","sound":"true","alert":"true","ecb":"onNotificationAPN"});	// required!
+                    	gameThrive.register(tokenHandler, errorHandler, {"badge":"true","sound":"true","alert":"true","ecb":"onNotificationAPN"});	// required!
                 	}
                 }
 				catch(err) 
@@ -77,7 +76,7 @@ NOTE:
                 }
                 
                 if (e.badge) {
-                    pushNotification.setApplicationIconBadgeNumber(successHandler, e.badge);
+                    gameThrive.setApplicationIconBadgeNumber(successHandler, e.badge);
                 }
             }
             
@@ -105,7 +104,6 @@ NOTE:
 							$("#app-status-ul").append('<li>--INLINE NOTIFICATION--' + '</li>');
 						      
 						        // on Android soundname is outside the payload. 
-					                // On Amazon FireOS all custom attributes are contained within payload
 					                var soundfile = e.soundname || e.payload.sound;
 					                // if the notification contains a soundname, play it.
 					                // playing a sound also requires the org.apache.cordova.media plugin
@@ -124,8 +122,6 @@ NOTE:
 						$("#app-status-ul").append('<li>MESSAGE -> MSG: ' + e.payload.message + '</li>');
                         //android only
 						$("#app-status-ul").append('<li>MESSAGE -> MSGCNT: ' + e.payload.msgcnt + '</li>');
-                        //amazon-fireos only
-                        $("#app-status-ul").append('<li>MESSAGE -> TIMESTAMP: ' + e.payload.timeStamp + '</li>');
                     break;
                     
                     case 'error':
@@ -158,7 +154,7 @@ NOTE:
 		<div id="home">
 			<div id="app-status-div">
 				<ul id="app-status-ul">
-					<li>Cordova PushNotification Plugin Demo</li>
+					<li>Cordova GameThrive Plugin Demo</li>
 				</ul>
 			</div>
 		</div>

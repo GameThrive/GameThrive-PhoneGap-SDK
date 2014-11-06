@@ -19,8 +19,8 @@ import java.util.Iterator;
  * @author awysocki
  */
 
-public class GameThrive extends CordovaPlugin {
-	public static final String TAG = "GameThrive";
+public class GameThrivePush extends CordovaPlugin {
+	public static final String TAG = "GameThrivePush";
 
 	public static final String REGISTER = "register";
 	public static final String UNREGISTER = "unregister";

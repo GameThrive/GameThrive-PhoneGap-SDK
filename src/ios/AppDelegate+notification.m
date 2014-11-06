@@ -7,7 +7,7 @@
 //
 
 #import "AppDelegate+notification.h"
-#import "PushPlugin.h"
+#import "GameThrivePush.h"
 #import <objc/runtime.h>
 
 static char launchNotificationKey;
@@ -53,12 +53,12 @@ static char launchNotificationKey;
 }
 
 - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
-    PushPlugin *pushHandler = [self getCommandInstance:@"PushPlugin"];
+    GameThrivePush *pushHandler = [self getCommandInstance:@"GameThrivePush"];
     [pushHandler didRegisterForRemoteNotificationsWithDeviceToken:deviceToken];
 }
 
 - (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
-    PushPlugin *pushHandler = [self getCommandInstance:@"PushPlugin"];
+    GameThrivePush *pushHandler = [self getCommandInstance:@"GameThrivePush"];
     [pushHandler didFailToRegisterForRemoteNotificationsWithError:error];
 }
 
@@ -72,7 +72,7 @@ static char launchNotificationKey;
     }
     
     if (appState == UIApplicationStateActive) {
-        PushPlugin *pushHandler = [self getCommandInstance:@"PushPlugin"];
+        GameThrivePush *pushHandler = [self getCommandInstance:@"GameThrivePush"];
         pushHandler.notificationMessage = userInfo;
         pushHandler.isInline = YES;
         [pushHandler notificationReceived];
@@ -90,7 +90,7 @@ static char launchNotificationKey;
     application.applicationIconBadgeNumber = 0;
 
     if (self.launchNotification) {
-        PushPlugin *pushHandler = [self getCommandInstance:@"PushPlugin"];
+        GameThrivePush *pushHandler = [self getCommandInstance:@"GameThrivePush"];
 		
         pushHandler.notificationMessage = self.launchNotification;
         self.launchNotification = nil;

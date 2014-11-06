@@ -11,7 +11,7 @@ using Newtonsoft.Json;
 
 namespace WPCordovaClassLib.Cordova.Commands
 {
-    public class PushPlugin : BaseCommand
+    public class GameThrivePush : BaseCommand
     {
         private const string InvalidRegistrationError = "Unable to open a channel with the specified name. The most probable cause is that you have already registered a channel with a different name. Call unregister(old-channel-name) or uninstall and redeploy your application.";
         private const string MissingChannelError = "Couldn't find a channel with the specified name.";
