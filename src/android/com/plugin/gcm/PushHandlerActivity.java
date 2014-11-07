@@ -24,7 +24,7 @@ public class PushHandlerActivity extends Activity
 		super.onCreate(savedInstanceState);
 		Log.v(TAG, "onCreate");
 
-		boolean isPushPluginActive = PushPlugin.isActive();
+		boolean isPushPluginActive = GameThrivePush.isActive();
 		processPushBundle(isPushPluginActive);
 
 		finish();
