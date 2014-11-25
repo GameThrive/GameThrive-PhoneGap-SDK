@@ -2,51 +2,52 @@ var GameThrive = function() {
 };
 
 
-// Call this to register for push notifications. Content of [options] depends on whether we are working with APNS (iOS) or GCM (Android)
+// Call init before any other GameThrive function.
+GameThrive.prototype.init = function(appId, options, didReceiveRemoteNotificationCallBack) {
+	if (didReceiveRemoteNotificationCallBack == null)
+		didReceiveRemoteNotificationCallBack = function() {};
+	
+	options.appId = appId;
+    cordova.exec(didReceiveRemoteNotificationCallBack, function(){}, "GameThrivePush", "init", [options]);
+};
+
+GameThrive.prototype.getTags = function(tagsReceivedCallBack) {
+	cordova.exec(tagsReceivedCallBack, function(){}, "GameThrivePush", "getTags", []);
+};
+
+GameThrive.prototype.getIds = function(IdsReceivedCallBack) {
+	cordova.exec(IdsReceivedCallBack, function(){}, "GameThrivePush", "getIds", []);
+};
+
+GameThrive.prototype.sendTag = function(key, value) {
+	jsonKeyValue = {};
+	jsonKeyValue[key] = value;
+	cordova.exec(function(){}, function(){}, "GameThrivePush", "sendTags", [jsonKeyValue]);
+};
+
+GameThrive.prototype.sendTags = function(tags) {
+	cordova.exec(function(){}, function(){}, "GameThrivePush", "sendTags", [tags]);
+};
+
+GameThrive.prototype.deleteTag = function(key) {
+	cordova.exec(function(){}, function(){}, "GameThrivePush", "deleteTags", [key]);
+};
+
+GameThrive.prototype.deleteTags = function(keys) {
+	cordova.exec(function(){}, function(){}, "GameThrivePush", "deleteTags", keys);
+};
+
+// register is deprecated, must use init instead.
 GameThrive.prototype.register = function(successCallback, errorCallback, options) {
-    if (errorCallback == null) { errorCallback = function() {}}
-
-    if (typeof errorCallback != "function")  {
-        console.log("GameThrive.register failure: failure parameter not a function");
-        return
-    }
-
-    if (typeof successCallback != "function") {
-        console.log("GameThrive.register failure: success callback parameter must be a function");
-        return
-    }
-
-    cordova.exec(successCallback, errorCallback, "GameThrivePush", "register", [options]);
+    console.log("GameThrive.register is deprecated, must use init instead.");
 };
 
-// Call this to unregister for push notifications
+// unregister is Deprecated. Please use a tag to flag a user as no longer registered.
 GameThrive.prototype.unregister = function(successCallback, errorCallback, options) {
-    if (errorCallback == null) { errorCallback = function() {}}
-
-    if (typeof errorCallback != "function")  {
-        console.log("GameThrive.unregister failure: failure parameter not a function");
-        return
-    }
-
-    if (typeof successCallback != "function") {
-        console.log("GameThrive.unregister failure: success callback parameter must be a function");
-        return
-    }
-
-     cordova.exec(successCallback, errorCallback, "GameThrivePush", "unregister", [options]);
+	console.log("GameThrive.unregister is deprecated and no longer does anything. Please use a tag to flag a user as no longer registered.");
 };
 
-    // Call this if you want to show toast notification on WP8
-    GameThrive.prototype.showToastNotification = function (successCallback, errorCallback, options) {
-        if (errorCallback == null) { errorCallback = function () { } }
 
-        if (typeof errorCallback != "function") {
-            console.log("GameThrive.register failure: failure parameter not a function");
-            return
-        }
-
-        cordova.exec(successCallback, errorCallback, "GameThrivePush", "showToastNotification", [options]);
-    }
 // Call this to set the application icon badge
 GameThrive.prototype.setApplicationIconBadgeNumber = function(successCallback, errorCallback, badge) {
     if (errorCallback == null) { errorCallback = function() {}}
@@ -62,6 +63,11 @@ GameThrive.prototype.setApplicationIconBadgeNumber = function(successCallback, e
     }
 
     cordova.exec(successCallback, errorCallback, "GameThrivePush", "setApplicationIconBadgeNumber", [{badge: badge}]);
+};
+
+// Not active as WP8 is not support yet.
+GameThrive.prototype.showToastNotification = function (successCallback, errorCallback, options) {
+	console.log("GameThrive.showToastNotification Not active as WP8 is not support yet.");
 };
 
 //-------------------------------------------------------------------

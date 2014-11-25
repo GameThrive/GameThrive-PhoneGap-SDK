@@ -1,245 +1,172 @@
+/**
+ * Copyright 2014 GameThrive
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.plugin.gcm;
 
-import android.app.NotificationManager;
+import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
-import com.google.android.gcm.GCMRegistrar;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
-import org.apache.cordova.CordovaWebView;
+import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Iterator;
+import java.util.ArrayList;
+import java.util.Collection;
 
-/**
- * @author awysocki
- */
+import com.gamethrive.GameThrive;
+import com.gamethrive.NotificationOpenedHandler;
+import com.gamethrive.GameThrive.GetTagsHandler;
+import com.gamethrive.GameThrive.IdsAvailableHandler;
 
 public class GameThrivePush extends CordovaPlugin {
 	public static final String TAG = "GameThrivePush";
 
-	public static final String REGISTER = "register";
-	public static final String UNREGISTER = "unregister";
-	public static final String EXIT = "exit";
-
-	private static CordovaWebView gWebView;
-	private static String gECB;
-	private static String gSenderID;
-	private static Bundle gCachedExtras = null;
-    private static boolean gForeground = false;
-
-	/**
-	 * Gets the application context from cordova's main activity.
-	 * @return the application context
-	 */
-	private Context getApplicationContext() {
-		return this.cordova.getActivity().getApplicationContext();
+	public static final String INIT = "init";
+	public static final String GET_TAGS = "getTags";
+	public static final String GET_IDS = "getIds";
+	public static final String DELETE_TAGS = "deleteTags";
+	public static final String SEND_TAGS = "sendTags";
+	
+	private static GameThrive gameThrive;
+	
+	// This is to prevent an issue where if two Javascript calls are made to GameThrive expecting a callback then only one would fire.
+	private static void callbackSuccess(CallbackContext callbackContext, JSONObject jsonObject) {
+		PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, jsonObject);
+		pluginResult.setKeepCallback(true);
+		callbackContext.sendPluginResult(pluginResult);
+	}
+	
+	private static void callbackError(CallbackContext callbackContext, String str) {
+		PluginResult pluginResult = new PluginResult(PluginResult.Status.ERROR, str);
+		pluginResult.setKeepCallback(true);
+		callbackContext.sendPluginResult(pluginResult);
 	}
 
 	@Override
 	public boolean execute(String action, JSONArray data, CallbackContext callbackContext) {
-
 		boolean result = false;
 
-		Log.v(TAG, "execute: action=" + action);
-
-		if (REGISTER.equals(action)) {
-
-			Log.v(TAG, "execute: data=" + data.toString());
-
+		if (INIT.equals(action)) {
+			if (gameThrive != null)
+				return false;
+			
 			try {
 				JSONObject jo = data.getJSONObject(0);
-
-				gWebView = this.webView;
-				Log.v(TAG, "execute: jo=" + jo.toString());
-
-				gECB = (String) jo.get("ecb");
-				gSenderID = (String) jo.get("senderID");
-
-				Log.v(TAG, "execute: ECB=" + gECB + " senderID=" + gSenderID);
-
-				GCMRegistrar.register(getApplicationContext(), gSenderID);
+				final CallbackContext jsNotificationOpenedCallBack = callbackContext;
+				gameThrive = new GameThrive(
+					(Activity)this.cordova.getActivity(),
+					jo.getString("googleProjectNumber"),
+					jo.getString("appId"),
+					new NotificationOpenedHandler() {
+						@Override
+						public void notificationOpened(String message, JSONObject additionalData, boolean isActive) {		
+							JSONObject outerObject = new JSONObject();
+							try {
+								outerObject.put("message", message);
+								outerObject.put("additionalData", additionalData);
+								outerObject.put("isActive", isActive);
+								callbackSuccess(jsNotificationOpenedCallBack, outerObject);
+							} catch (Throwable t) {
+								t.printStackTrace();
+							}
+						}
+					});
+				
 				result = true;
-				callbackContext.success();
 			} catch (JSONException e) {
 				Log.e(TAG, "execute: Got JSON Exception " + e.getMessage());
 				result = false;
-				callbackContext.error(e.getMessage());
 			}
-
-			if ( gCachedExtras != null) {
-				Log.v(TAG, "sending cached extras");
-				sendExtras(gCachedExtras);
-				gCachedExtras = null;
-			}
-
-		} else if (UNREGISTER.equals(action)) {
-
-			GCMRegistrar.unregister(getApplicationContext());
-
-			Log.v(TAG, "UNREGISTER");
+		}
+		else if (GET_TAGS.equals(action)) {
+			final CallbackContext jsTagsAvailableCallBack = callbackContext;
+			gameThrive.getTags(new GetTagsHandler() {
+				@Override
+				public void tagsAvailable(JSONObject tags) {
+					callbackSuccess(jsTagsAvailableCallBack, tags);
+				}
+			});
 			result = true;
-			callbackContext.success();
-		} else {
+		}
+		else if (GET_IDS.equals(action)) {
+			final CallbackContext jsIdsAvailableCallBack = callbackContext;
+			gameThrive.idsAvailable(new IdsAvailableHandler() {
+				@Override
+				public void idsAvailable(String playerId, String registrationId) {
+					JSONObject jsonIds = new JSONObject();
+					try {
+						jsonIds.put("playerId", playerId);
+						if (registrationId != null)
+							jsonIds.put("pushToken", registrationId);
+						else
+							jsonIds.put("pushToken", "");
+						
+						callbackSuccess(jsIdsAvailableCallBack, jsonIds);
+					} catch (Throwable t) {
+						t.printStackTrace();
+					}
+				}
+			});
+			result = true;
+		}
+		else if (SEND_TAGS.equals(action)) {
+			try {
+				gameThrive.sendTags(data.getJSONObject(0));
+			} catch (Throwable t) {
+				t.printStackTrace();
+			}
+			result = true;
+		}
+		else if (DELETE_TAGS.equals(action)) {
+			try {
+				Collection<String> list = new ArrayList<String>();
+				for (int i = 0; i < data.length(); i++)
+					list.add(data.get(i).toString());
+				gameThrive.deleteTags(list);
+			} catch (Throwable t) {
+				t.printStackTrace();
+			}
+			result = true;
+		}
+		else {
 			result = false;
 			Log.e(TAG, "Invalid action : " + action);
-			callbackContext.error("Invalid action : " + action);
+			callbackError(callbackContext, "Invalid action : " + action);
 		}
 
 		return result;
 	}
 
-	/*
-	 * Sends a json object to the client as parameter to a method which is defined in gECB.
-	 */
-	public static void sendJavascript(JSONObject _json) {
-		String _d = "javascript:" + gECB + "(" + _json.toString() + ")";
-		Log.v(TAG, "sendJavascript: " + _d);
-
-		if (gECB != null && gWebView != null) {
-			gWebView.sendJavascript(_d);
-		}
-	}
-
-	/*
-	 * Sends the pushbundle extras to the client application.
-	 * If the client application isn't currently active, it is cached for later processing.
-	 */
-	public static void sendExtras(Bundle extras)
-	{
-		if (extras != null) {
-			if (gECB != null && gWebView != null) {
-				sendJavascript(convertBundleToJson(extras));
-			} else {
-				Log.v(TAG, "sendExtras: caching extras to send at a later time.");
-				gCachedExtras = extras;
-			}
-		}
-	}
-
-    @Override
-    public void initialize(CordovaInterface cordova, CordovaWebView webView) {
-        super.initialize(cordova, webView);
-        gForeground = true;
-    }
-
 	@Override
     public void onPause(boolean multitasking) {
         super.onPause(multitasking);
-        gForeground = false;
-        final NotificationManager notificationManager = (NotificationManager) cordova.getActivity().getSystemService(Context.NOTIFICATION_SERVICE);
-        notificationManager.cancelAll();
+        if (gameThrive != null)
+			gameThrive.onPaused();
     }
 
     @Override
     public void onResume(boolean multitasking) {
         super.onResume(multitasking);
-        gForeground = true;
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        gForeground = false;
-		gECB = null;
-		gWebView = null;
-    }
-
-    /*
-     * serializes a bundle to JSON.
-     */
-    private static JSONObject convertBundleToJson(Bundle extras)
-    {
-		try
-		{
-			JSONObject json;
-			json = new JSONObject().put("event", "message");
-
-			JSONObject jsondata = new JSONObject();
-			Iterator<String> it = extras.keySet().iterator();
-			while (it.hasNext())
-			{
-				String key = it.next();
-				Object value = extras.get(key);
-
-				// System data from Android
-				if (key.equals("from") || key.equals("collapse_key"))
-				{
-					json.put(key, value);
-				}
-				else if (key.equals("foreground"))
-				{
-					json.put(key, extras.getBoolean("foreground"));
-				}
-				else if (key.equals("coldstart"))
-				{
-					json.put(key, extras.getBoolean("coldstart"));
-				}
-				else
-				{
-					// Maintain backwards compatibility
-					if (key.equals("alert") || key.equals("msgcnt") || key.equals("soundname"))
-					{
-						json.put(key, value);
-					}
-
-					if ( value instanceof String ) {
-					// Try to figure out if the value is another JSON object
-
-						String strValue = (String)value;
-						if (strValue.startsWith("{")) {
-							try {
-								JSONObject json2 = new JSONObject(strValue);
-								jsondata.put(key, json2);
-							}
-							catch (Exception e) {
-								jsondata.put(key, value);
-							}
-							// Try to figure out if the value is another JSON array
-						}
-						else if (strValue.startsWith("["))
-						{
-							try
-							{
-								JSONArray json2 = new JSONArray(strValue);
-								jsondata.put(key, json2);
-							}
-							catch (Exception e)
-							{
-								jsondata.put(key, value);
-							}
-						}
-						else
-						{
-							jsondata.put(key, value);
-						}
-					}
-				}
-			} // while
-			json.put("payload", jsondata);
-
-			Log.v(TAG, "extrasToJSON: " + json.toString());
-
-			return json;
-		}
-		catch( JSONException e)
-		{
-			Log.e(TAG, "extrasToJSON: JSON exception");
-		}
-		return null;
-    }
-
-    public static boolean isInForeground()
-    {
-      return gForeground;
-    }
-
-    public static boolean isActive()
-    {
-    	return gWebView != null;
+		if (gameThrive != null)
+			gameThrive.onResumed();
     }
 }

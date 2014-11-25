@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    id="com.gamethrive.plugins.GameThrive"
-    version="1.0.1">
+		xmlns:android="http://schemas.android.com/apk/res/android"
+		id="com.gamethrive.plugins.GameThrive"
+		version="1.1.0">
 
-  <name>GameThrive Push Notifications</name>
-	<author>Bob Easterday</author>
+	<name>GameThrive Push Notifications</name>
+	<author>Josh Kasten</author>
 
 	<description>
 		GameThrive Push Notifications for iOS and Android.
@@ -16,7 +16,7 @@
 	<license>MIT</license>
 
 	<js-module src="www/GameThrive.js" name="GameThrive">
-        <clobbers target="GameThrive" />
+		<clobbers target="GameThrive" />
 	</js-module>
 
 	<engines>
@@ -33,8 +33,7 @@
 		</config-file>
 
 		<config-file target="AndroidManifest.xml" parent="/manifest">
-			<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-			<uses-permission android:name="android.permission.GET_ACCOUNTS" />
+			<uses-permission android:name="android.permission.INTERNET" />
 			<uses-permission android:name="android.permission.WAKE_LOCK" />
 			<uses-permission android:name="android.permission.VIBRATE"/>
 			<uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
@@ -43,36 +42,76 @@
 		</config-file>
 
 		<config-file target="AndroidManifest.xml" parent="/manifest/application">
-			<activity android:name="com.plugin.gcm.PushHandlerActivity" android:exported="true"/>
-			<receiver android:name="com.plugin.gcm.CordovaGCMBroadcastReceiver" android:permission="com.google.android.c2dm.permission.SEND" >
+			<activity android:name="com.gamethrive.NotificationOpenedActivity"/>
+			
+			<receiver
+				android:name="com.gamethrive.GcmBroadcastReceiver"
+				android:permission="com.google.android.c2dm.permission.SEND" >
 				<intent-filter>
 					<action android:name="com.google.android.c2dm.intent.RECEIVE" />
-					<action android:name="com.google.android.c2dm.intent.REGISTRATION" />
 					<category android:name="$PACKAGE_NAME" />
 				</intent-filter>
 			</receiver>
-			<service android:name="com.plugin.gcm.GCMIntentService" />
+			<service android:name="com.gamethrive.GcmIntentService" />
 		</config-file>
-
-		<source-file src="src/android/com/google/android/gcm/GCMBaseIntentService.java" target-dir="src/android/com/android/google/gcm/" />
-		<source-file src="src/android/com/google/android/gcm/GCMBroadcastReceiver.java" target-dir="src/android/com/android/google/gcm/" />
-		<source-file src="src/android/com/google/android/gcm/GCMConstants.java" target-dir="src/android/com/android/google/gcm/" />
-		<source-file src="src/android/com/google/android/gcm/GCMRegistrar.java" target-dir="src/android/com/android/google/gcm/" />
-
 		
 		<source-file src="src/android/android/support/v4/app/NotificationCompat.java" target-dir="src/android/android/support/v4/app/" />
 		<source-file src="src/android/android/support/v4/app/NotificationCompatHoneycomb.java" target-dir="src/android/android/support/v4/app/" />
 		<source-file src="src/android/android/support/v4/app/NotificationCompatIceCreamSandwich.java" target-dir="src/android/android/support/v4/app/" />
 		<source-file src="src/android/android/support/v4/app/NotificationCompatJellybean.java" target-dir="src/android/android/support/v4/app/" />
 		<source-file src="src/android/android/support/v4/app/NotificationCompatGingerbread.java" target-dir="src/android/android/support/v4/app/" />
-
+		
 		<source-file src="src/android/android/support/v4/view/GravityCompat.java" target-dir="src/android/android/support/v4/view/" />
 		<source-file src="src/android/android/support/v4/view/GravityCompatJellybeanMr1.java" target-dir="src/android/android/support/v4/view/" />
 		
+		<source-file src="src/android/android/support/v4/content/WakefulBroadcastReceiver.java" target-dir="src/android/android/support/v4/content/" />
+		
+		
+		<source-file src="src/android/com/gamethrive/AdvertisingIdProviderFallback.java" target-dir="src/android/com/gamethrive/" />
+		<source-file src="src/android/com/gamethrive/AdvertisingIdProviderGPSAlt.java" target-dir="src/android/com/gamethrive/" />
+		<source-file src="src/android/com/gamethrive/AdvertisingIdentifierProvider.java" target-dir="src/android/com/gamethrive/" />
+		<source-file src="src/android/com/gamethrive/GameThrive.java" target-dir="src/android/com/gamethrive/" />
+		<source-file src="src/android/com/gamethrive/GameThriveRestClient.java" target-dir="src/android/com/gamethrive/" />
+		<source-file src="src/android/com/gamethrive/GcmBroadcastReceiver.java" target-dir="src/android/com/gamethrive/" />
+		<source-file src="src/android/com/gamethrive/GcmIntentService.java" target-dir="src/android/com/gamethrive/" />
+		<source-file src="src/android/com/gamethrive/NotificationOpenedActivity.java" target-dir="src/android/com/gamethrive/" />
+		<source-file src="src/android/com/gamethrive/NotificationOpenedHandler.java" target-dir="src/android/com/gamethrive/" />
+		<source-file src="src/android/com/gamethrive/PushRegistrator.java" target-dir="src/android/com/gamethrive/" />
+		<source-file src="src/android/com/gamethrive/PushRegistratorGPSAlt.java" target-dir="src/android/com/gamethrive/" />
+		<source-file src="src/android/com/gamethrive/TrackPlayerPurchase.java" target-dir="src/android/com/gamethrive/" />
 
-		<source-file src="src/android/com/plugin/gcm/CordovaGCMBroadcastReceiver.java" target-dir="src/com/plugin/gcm/" />
-		<source-file src="src/android/com/plugin/gcm/GCMIntentService.java" target-dir="src/com/plugin/gcm/" />
-		<source-file src="src/android/com/plugin/gcm/PushHandlerActivity.java" target-dir="src/com/plugin/gcm/" />
+		<source-file src="src/android/com/loopj/android/http/AssertUtils.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/AsyncHttpClient.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/AsyncHttpRequest.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/AsyncHttpResponseHandler.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/Base64.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/Base64DataException.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/Base64OutputStream.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/BaseJsonHttpResponseHandler.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/BinaryHttpResponseHandler.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/DataAsyncHttpResponseHandler.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/FileAsyncHttpResponseHandler.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/JsonHttpResponseHandler.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/JsonStreamerEntity.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/JsonValueInterface.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/MyRedirectHandler.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/MySSLSocketFactory.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/PersistentCookieStore.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/PreemtiveAuthorizationHttpRequestInterceptor.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/RangeFileAsyncHttpResponseHandler.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/RequestHandle.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/RequestParams.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/ResponseHandlerInterface.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/RetryHandler.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/SaxAsyncHttpResponseHandler.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/SerializableCookie.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/SimpleMultipartEntity.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/SyncHttpClient.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/TextHttpResponseHandler.java" target-dir="src/android/com/loopj/android/http/" />
+		<source-file src="src/android/com/loopj/android/http/package-info.java" target-dir="src/android/com/loopj/android/http/" />
+
+		<source-file src="src/android/com/stericson/RootTools/internal/RootToolsInternalMethods.java" target-dir="src/android/com/stericson/RootTools/internal/" />
+
 		<source-file src="src/android/com/plugin/gcm/GameThrivePush.java" target-dir="src/com/plugin/gcm/" />
 
 	</platform>
