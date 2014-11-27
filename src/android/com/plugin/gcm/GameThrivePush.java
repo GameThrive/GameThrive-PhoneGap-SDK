@@ -45,6 +45,7 @@ public class GameThrivePush extends CordovaPlugin {
 	public static final String GET_IDS = "getIds";
 	public static final String DELETE_TAGS = "deleteTags";
 	public static final String SEND_TAGS = "sendTags";
+	public static final String REGISTER_FOR_PUSH_NOTIFICATIONS = "registerForPushNotifications";
 	
 	private static GameThrive gameThrive;
 	
@@ -145,6 +146,10 @@ public class GameThrivePush extends CordovaPlugin {
 			} catch (Throwable t) {
 				t.printStackTrace();
 			}
+			result = true;
+		}
+		else if (REGISTER_FOR_PUSH_NOTIFICATIONS.equals(action)) {
+			// Does not apply to Android.
 			result = true;
 		}
 		else {

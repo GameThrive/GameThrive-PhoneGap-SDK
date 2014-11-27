@@ -13,7 +13,7 @@
 
 	<keywords>GameThrive,push,notification,pushnotification,pushnotifications,retention,userretention,messages</keywords>
 
-	<license>MIT</license>
+	<license>Apache 2.0</license>
 
 	<js-module src="www/GameThrive.js" name="GameThrive">
 		<clobbers target="GameThrive" />
@@ -125,10 +125,22 @@
 			</feature>
 		</config-file>
 
-		<source-file src="src/ios/AppDelegate+notification.m" />
+		<config-file target="*-Info.plist" parent="UIBackgroundModes">
+            <array>
+                <string>remote-notification</string>
+            </array>
+        </config-file>
+
+		<source-file src="src/ios/GameThrive.m" />
+		<source-file src="src/ios/GTHTTPClient.m" />
+		<source-file src="src/ios/GTTrackPlayerPurchase.m" />
+		<source-file src="src/ios/HGTJailbreakDetection.m" />
 		<source-file src="src/ios/GameThrivePush.m" />
 
-		<header-file src="src/ios/AppDelegate+notification.h" />
+		<header-file src="src/ios/GameThrive.h" />
+		<header-file src="src/ios/GTHTTPClient.h" />
+		<header-file src="src/ios/GTTrackPlayerPurchase.h" />
+		<header-file src="src/ios/HGTJailbreakDetection.h" />
 		<header-file src="src/ios/GameThrivePush.h" />
 
 	</platform>

@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-package com.gamethrive;
+@interface GTTrackPlayerPurchase : NSObject
++ (BOOL)canTrack;
+- (id)init;
+@end
 
-import android.content.Context;
-
-interface AdvertisingIdentifierProvider {
-	String getIdentifier(Context context);
-}

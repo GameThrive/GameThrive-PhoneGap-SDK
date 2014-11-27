@@ -1,280 +1,152 @@
-/*
- Copyright 2009-2011 Urban Airship Inc. All rights reserved.
-
- Redistribution and use in source and binary forms, with or without
- modification, are permitted provided that the following conditions are met:
-
- 1. Redistributions of source code must retain the above copyright notice, this
- list of conditions and the following disclaimer.
-
- 2. Redistributions in binaryform must reproduce the above copyright notice,
- this list of conditions and the following disclaimer in the documentation
- and/or other materials provided withthe distribution.
-
- THIS SOFTWARE IS PROVIDED BY THE URBAN AIRSHIP INC``AS IS'' AND ANY EXPRESS OR
- IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
- EVENT SHALL URBAN AIRSHIP INC OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
- LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
- OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
- ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+/**
+ * Copyright 2014 GameThrive
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
+#import <UIKit/UIKit.h>
+#import <objc/runtime.h>
+
 #import "GameThrivePush.h"
+#import "GameThrive.h"
+
+GameThrive* gameThrive;
+
+NSString* notficationOpenedCallbackId;
+NSString* getTagsCallbackId;
+NSString* getIdsCallbackId;
+
+NSMutableDictionary* launchDict;
+
+id <CDVCommandDelegate> pluginCommandDelegate;
+
+void successCallback(NSString* callbackId, NSDictionary* data) {
+    CDVPluginResult* commandResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:data];
+    commandResult.keepCallback = @1;
+    [pluginCommandDelegate sendPluginResult:commandResult callbackId:callbackId];
+}
+
+void processNotificationOpened(NSDictionary* launchOptions) {
+    successCallback(notficationOpenedCallbackId, launchOptions);
+}
+
+void initGameThriveObject(NSDictionary* launchOptions, const char* appId, BOOL autoRegister) {
+    if (gameThrive == nil) {
+        NSString* appIdStr = (appId ? [NSString stringWithUTF8String: appId] : nil);
+        
+        gameThrive = [[GameThrive alloc] initWithLaunchOptions:launchOptions appId:appIdStr handleNotification:^(NSString* message, NSDictionary* additionalData, BOOL isActive) {
+            launchDict = [NSMutableDictionary new];
+            launchDict[@"message"] = message;
+            if (additionalData)
+                launchDict[@"additionalData"] = additionalData;
+            launchDict[@"isActive"] = [NSNumber numberWithBool:isActive];
+            
+            if (pluginCommandDelegate)
+                processNotificationOpened(launchDict);
+        } autoRegister:autoRegister];
+    }
+}
+
+@implementation UIApplication(GameThriveCordovaPush)
+
+static void injectSelector(Class newClass, SEL newSel, Class addToClass, SEL makeLikeSel) {
+    Method newMeth = class_getInstanceMethod(newClass, newSel);
+    IMP imp = method_getImplementation(newMeth);
+    const char* methodTypeEncoding = method_getTypeEncoding(newMeth);
+    
+    BOOL successful = class_addMethod(addToClass, makeLikeSel, imp, methodTypeEncoding);
+    if (!successful) {
+        class_addMethod(addToClass, newSel, imp, methodTypeEncoding);
+        newMeth = class_getInstanceMethod(addToClass, newSel);
+        
+        Method orgMeth = class_getInstanceMethod(addToClass, makeLikeSel);
+        
+        method_exchangeImplementations(orgMeth, newMeth);
+    }
+}
+
++ (void)load {
+    method_exchangeImplementations(class_getInstanceMethod(self, @selector(setDelegate:)), class_getInstanceMethod(self, @selector(setGameThriveCordovaDelegate:)));
+}
+
+static Class delegateClass = nil;
+
+- (void) setGameThriveCordovaDelegate:(id<UIApplicationDelegate>)delegate {
+    if(delegateClass != nil)
+        return;
+    delegateClass = [delegate class];
+    
+    injectSelector(self.class, @selector(gameThriveApplication:didFinishLaunchingWithOptions:),
+                   delegateClass, @selector(application:didFinishLaunchingWithOptions:));
+    [self setGameThriveCordovaDelegate:delegate];
+}
+
+- (BOOL)gameThriveApplication:(UIApplication*)application didFinishLaunchingWithOptions:(NSDictionary*)launchOptions {
+    if ([launchOptions objectForKey:UIApplicationLaunchOptionsRemoteNotificationKey] != nil)
+        initGameThriveObject(launchOptions, nil, true);
+    
+    if ([self respondsToSelector:@selector(gameThriveApplication:didFinishLaunchingWithOptions:)])
+        return [self gameThriveApplication:application didFinishLaunchingWithOptions:launchOptions];
+    return YES;
+}
+
+@end
 
 @implementation GameThrivePush
 
-@synthesize notificationMessage;
-@synthesize isInline;
+- (void)init:(CDVInvokedUrlCommand*)command {
+    pluginCommandDelegate = self.commandDelegate;
+    notficationOpenedCallbackId = command.callbackId;
 
-@synthesize callbackId;
-@synthesize notificationCallbackId;
-@synthesize callback;
+    NSDictionary* options = command.arguments[0];
+    
+    BOOL autoRegister = true;
+    if ([options objectForKey:@"autoRegister"] == @NO)
+        autoRegister = false;
 
-
-- (void)unregister:(CDVInvokedUrlCommand*)command;
-{
-	self.callbackId = command.callbackId;
-
-    [[UIApplication sharedApplication] unregisterForRemoteNotifications];
-    [self successWithMessage:@"unregistered"];
+    initGameThriveObject(nil, [options[@"appId"] UTF8String], autoRegister);
+    
+    if (launchDict)
+        processNotificationOpened(launchDict);
 }
 
-- (void)register:(CDVInvokedUrlCommand*)command;
-{
-	self.callbackId = command.callbackId;
-
-    NSMutableDictionary* options = [command.arguments objectAtIndex:0];
-
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 80000
-		UIUserNotificationType UserNotificationTypes = UIUserNotificationTypeNone;
-#endif
-    UIRemoteNotificationType notificationTypes = UIRemoteNotificationTypeNone;
-
-    id badgeArg = [options objectForKey:@"badge"];
-    id soundArg = [options objectForKey:@"sound"];
-    id alertArg = [options objectForKey:@"alert"];
-
-    if ([badgeArg isKindOfClass:[NSString class]])
-    {
-        if ([badgeArg isEqualToString:@"true"]) {
-            notificationTypes |= UIRemoteNotificationTypeBadge;
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 80000
-            UserNotificationTypes |= UIUserNotificationTypeBadge;
-#endif
-        }
-    }
-    else if ([badgeArg boolValue]) {
-        notificationTypes |= UIRemoteNotificationTypeBadge;
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 80000
-        UserNotificationTypes |= UIUserNotificationTypeBadge;
-#endif
-    }
-
-    if ([soundArg isKindOfClass:[NSString class]])
-    {
-        if ([soundArg isEqualToString:@"true"]) {
-            notificationTypes |= UIRemoteNotificationTypeSound;
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 80000
-            UserNotificationTypes |= UIUserNotificationTypeSound;
-#endif
-    }
-    }
-    else if ([soundArg boolValue]) {
-        notificationTypes |= UIRemoteNotificationTypeSound;
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 80000
-        UserNotificationTypes |= UIUserNotificationTypeSound;
-#endif
-    }
-
-    if ([alertArg isKindOfClass:[NSString class]])
-    {
-        if ([alertArg isEqualToString:@"true"]) {
-            notificationTypes |= UIRemoteNotificationTypeAlert;
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 80000
-            UserNotificationTypes |= UIUserNotificationTypeAlert;
-#endif
-    }
-    }
-    else if ([alertArg boolValue]) {
-        notificationTypes |= UIRemoteNotificationTypeAlert;
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 80000
-        UserNotificationTypes |= UIUserNotificationTypeAlert;
-#endif
-    }
-
-    notificationTypes |= UIRemoteNotificationTypeNewsstandContentAvailability;
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 80000
-    UserNotificationTypes |= UIUserNotificationActivationModeBackground;
-#endif
-
-    self.callback = [options objectForKey:@"ecb"];
-
-    if (notificationTypes == UIRemoteNotificationTypeNone)
-        NSLog(@"GameThrivePush.register: Push notification type is set to none");
-
-    isInline = NO;
-
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 80000
-    if ([[UIApplication sharedApplication]respondsToSelector:@selector(registerUserNotificationSettings:)]) {
-        UIUserNotificationSettings *settings = [UIUserNotificationSettings settingsForTypes:UserNotificationTypes categories:nil];
-        [[UIApplication sharedApplication] registerUserNotificationSettings:settings];
-        [[UIApplication sharedApplication] registerForRemoteNotifications];
-    } else {
-    		[[UIApplication sharedApplication] registerForRemoteNotificationTypes:notificationTypes];
-    }
-#else
-		[[UIApplication sharedApplication] registerForRemoteNotificationTypes:notificationTypes];
-#endif
-
-	if (notificationMessage)			// if there is a pending startup notification
-		[self notificationReceived];	// go ahead and process it
+- (void)getTags:(CDVInvokedUrlCommand*)command {
+    getTagsCallbackId = command.callbackId;
+    [gameThrive getTags:^(NSDictionary* result) {
+        successCallback(getTagsCallbackId, result);
+    }];
 }
 
-/*
-- (void)isEnabled:(NSMutableArray *)arguments withDict:(NSMutableDictionary *)options {
-    UIRemoteNotificationType type = [[UIApplication sharedApplication] enabledRemoteNotificationTypes];
-    NSString *jsStatement = [NSString stringWithFormat:@"navigator.GameThrivePush.isEnabled = %d;", type != UIRemoteNotificationTypeNone];
-    NSLog(@"JSStatement %@",jsStatement);
-}
-*/
-
-- (void)didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
-
-    NSMutableDictionary *results = [NSMutableDictionary dictionary];
-    NSString *token = [[[[deviceToken description] stringByReplacingOccurrencesOfString:@"<"withString:@""]
-                        stringByReplacingOccurrencesOfString:@">" withString:@""]
-                       stringByReplacingOccurrencesOfString: @" " withString: @""];
-    [results setValue:token forKey:@"deviceToken"];
-
-    #if !TARGET_IPHONE_SIMULATOR
-        // Get Bundle Info for Remote Registration (handy if you have more than one app)
-        [results setValue:[[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleDisplayName"] forKey:@"appName"];
-        [results setValue:[[[NSBundle mainBundle] infoDictionary] objectForKey:@"CFBundleVersion"] forKey:@"appVersion"];
-
-        // Check what Notifications the user has turned on.  We registered for all three, but they may have manually disabled some or all of them.
-        NSUInteger rntypes = [[UIApplication sharedApplication] enabledRemoteNotificationTypes];
-
-        // Set the defaults to disabled unless we find otherwise...
-        NSString *pushBadge = @"disabled";
-        NSString *pushAlert = @"disabled";
-        NSString *pushSound = @"disabled";
-
-        // Check what Registered Types are turned on. This is a bit tricky since if two are enabled, and one is off, it will return a number 2... not telling you which
-        // one is actually disabled. So we are literally checking to see if rnTypes matches what is turned on, instead of by number. The "tricky" part is that the
-        // single notification types will only match if they are the ONLY one enabled.  Likewise, when we are checking for a pair of notifications, it will only be
-        // true if those two notifications are on.  This is why the code is written this way
-        if(rntypes & UIRemoteNotificationTypeBadge){
-            pushBadge = @"enabled";
-        }
-        if(rntypes & UIRemoteNotificationTypeAlert) {
-            pushAlert = @"enabled";
-        }
-        if(rntypes & UIRemoteNotificationTypeSound) {
-            pushSound = @"enabled";
-        }
-
-        [results setValue:pushBadge forKey:@"pushBadge"];
-        [results setValue:pushAlert forKey:@"pushAlert"];
-        [results setValue:pushSound forKey:@"pushSound"];
-
-        // Get the users Device Model, Display Name, Token & Version Number
-        UIDevice *dev = [UIDevice currentDevice];
-        [results setValue:dev.name forKey:@"deviceName"];
-        [results setValue:dev.model forKey:@"deviceModel"];
-        [results setValue:dev.systemVersion forKey:@"deviceSystemVersion"];
-
-		[self successWithMessage:[NSString stringWithFormat:@"%@", token]];
-    #endif
+- (void)getIds:(CDVInvokedUrlCommand*)command {
+    getIdsCallbackId = command.callbackId;
+    [gameThrive IdsAvailable:^(NSString* playerId, NSString* pushToken) {
+        if(pushToken == nil)
+            pushToken = @"";
+        
+        successCallback(getIdsCallbackId, @{@"playerId" : playerId, @"pushToken" : pushToken});
+    }];
 }
 
-- (void)didFailToRegisterForRemoteNotificationsWithError:(NSError *)error
-{
-	[self failWithMessage:@"" withError:error];
+- (void)sendTags:(CDVInvokedUrlCommand*)command {
+    [gameThrive sendTags:command.arguments[0]];
 }
 
-- (void)notificationReceived {
-    NSLog(@"Notification received");
-
-    if (notificationMessage && self.callback)
-    {
-        NSMutableString *jsonStr = [NSMutableString stringWithString:@"{"];
-
-        [self parseDictionary:notificationMessage intoJSON:jsonStr];
-
-        if (isInline)
-        {
-            [jsonStr appendFormat:@"foreground:\"%d\"", 1];
-            isInline = NO;
-        }
-		else
-            [jsonStr appendFormat:@"foreground:\"%d\"", 0];
-
-        [jsonStr appendString:@"}"];
-
-        NSLog(@"Msg: %@", jsonStr);
-
-        NSString * jsCallBack = [NSString stringWithFormat:@"%@(%@);", self.callback, jsonStr];
-        [self.webView stringByEvaluatingJavaScriptFromString:jsCallBack];
-
-        self.notificationMessage = nil;
-    }
+- (void)deleteTags:(CDVInvokedUrlCommand*)command {
+    [gameThrive deleteTags:command.arguments];
 }
 
-// reentrant method to drill down and surface all sub-dictionaries' key/value pairs into the top level json
--(void)parseDictionary:(NSDictionary *)inDictionary intoJSON:(NSMutableString *)jsonString
-{
-    NSArray         *keys = [inDictionary allKeys];
-    NSString        *key;
-
-    for (key in keys)
-    {
-        id thisObject = [inDictionary objectForKey:key];
-
-        if ([thisObject isKindOfClass:[NSDictionary class]])
-            [self parseDictionary:thisObject intoJSON:jsonString];
-        else if ([thisObject isKindOfClass:[NSString class]])
-             [jsonString appendFormat:@"\"%@\":\"%@\",",
-              key,
-              [[[[inDictionary objectForKey:key]
-                stringByReplacingOccurrencesOfString:@"\\" withString:@"\\\\"]
-                 stringByReplacingOccurrencesOfString:@"\"" withString:@"\\\""]
-                 stringByReplacingOccurrencesOfString:@"\n" withString:@"\\n"]];
-        else {
-            [jsonString appendFormat:@"\"%@\":\"%@\",", key, [inDictionary objectForKey:key]];
-        }
-    }
-}
-
-- (void)setApplicationIconBadgeNumber:(CDVInvokedUrlCommand *)command {
-
-    self.callbackId = command.callbackId;
-
-    NSMutableDictionary* options = [command.arguments objectAtIndex:0];
-    int badge = [[options objectForKey:@"badge"] intValue] ?: 0;
-
-    [[UIApplication sharedApplication] setApplicationIconBadgeNumber:badge];
-
-    [self successWithMessage:[NSString stringWithFormat:@"app badge count set to %d", badge]];
-}
--(void)successWithMessage:(NSString *)message
-{
-    if (self.callbackId != nil)
-    {
-        CDVPluginResult *commandResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:message];
-        [self.commandDelegate sendPluginResult:commandResult callbackId:self.callbackId];
-    }
-}
-
--(void)failWithMessage:(NSString *)message withError:(NSError *)error
-{
-    NSString        *errorMessage = (error) ? [NSString stringWithFormat:@"%@ - %@", message, [error localizedDescription]] : message;
-    CDVPluginResult *commandResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:errorMessage];
-
-    [self.commandDelegate sendPluginResult:commandResult callbackId:self.callbackId];
+- (void)registerForPushNotifications:(CDVInvokedUrlCommand*)command {
+    [gameThrive registerForPushNotifications];
 }
 
 @end

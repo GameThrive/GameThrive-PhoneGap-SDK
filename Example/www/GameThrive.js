@@ -1,65 +1,71 @@
-
 var GameThrive = function() {
 };
 
 
-	// Call this to register for push notifications. Content of [options] depends on whether we are working with APNS (iOS) or GCM (Android)
-	GameThrive.prototype.register = function(successCallback, errorCallback, options) {
-    	if (errorCallback == null) { errorCallback = function() {}}
+// You must call init before any other GameThrive function.
+// options is a JSON object that includes:
+//  Android - googleProjectNumber: is required.
+//  iOS - autoRegister: Set as false to delay the iOS push notification permisions system prompt.
+//                      Make sure to call registerForPushNotifications sometime later.
+GameThrive.prototype.init = function(appId, options, didReceiveRemoteNotificationCallBack) {
+	if (didReceiveRemoteNotificationCallBack == null)
+		didReceiveRemoteNotificationCallBack = function() {};
+	
+	options.appId = appId;
+    cordova.exec(didReceiveRemoteNotificationCallBack, function(){}, "GameThrivePush", "init", [options]);
+};
 
-		if (typeof errorCallback != "function")  {
-			console.log("GameThrive.register failure: failure parameter not a function");
-			return;
-		}
+GameThrive.prototype.getTags = function(tagsReceivedCallBack) {
+	cordova.exec(tagsReceivedCallBack, function(){}, "GameThrivePush", "getTags", []);
+};
 
-		if (typeof successCallback != "function") {
-			console.log("GameThrive.register failure: success callback parameter must be a function");
-			return;
-		}
+GameThrive.prototype.getIds = function(IdsReceivedCallBack) {
+	cordova.exec(IdsReceivedCallBack, function(){}, "GameThrivePush", "getIds", []);
+};
 
-		cordova.exec(successCallback, errorCallback, "PushPlugin", "register", [options]);
-	};
+GameThrive.prototype.sendTag = function(key, value) {
+	jsonKeyValue = {};
+	jsonKeyValue[key] = value;
+	cordova.exec(function(){}, function(){}, "GameThrivePush", "sendTags", [jsonKeyValue]);
+};
 
-    // Call this to unregister for push notifications
-    GameThrive.prototype.unregister = function(successCallback, errorCallback) {
-		if (errorCallback == null) { errorCallback = function() {}}
+GameThrive.prototype.sendTags = function(tags) {
+	cordova.exec(function(){}, function(){}, "GameThrivePush", "sendTags", [tags]);
+};
 
-		if (typeof errorCallback != "function")  {
-			console.log("GameThrive.unregister failure: failure parameter not a function");
-			return;
-		}
+GameThrive.prototype.deleteTag = function(key) {
+	cordova.exec(function(){}, function(){}, "GameThrivePush", "deleteTags", [key]);
+};
 
-		if (typeof successCallback != "function") {
-			console.log("GameThrive.unregister failure: success callback parameter must be a function");
-			return;
-		}
+GameThrive.prototype.deleteTags = function(keys) {
+	cordova.exec(function(){}, function(){}, "GameThrivePush", "deleteTags", keys);
+};
 
-		cordova.exec(successCallback, errorCallback, "PushPlugin", "unregister", []);
-    };
- 
- 
-    // Call this to set the application icon badge
-    GameThrive.prototype.setApplicationIconBadgeNumber = function(successCallback, badge) {
-		if (errorCallback == null) { errorCallback = function() {}}
+// register is deprecated, must use init instead.
+GameThrive.prototype.register = function(successCallback, errorCallback, options) {
+    console.log("GameThrive.register is deprecated, must use init instead.");
+};
 
-		if (typeof errorCallback != "function")  {
-			console.log("GameThrive.setApplicationIconBadgeNumber failure: failure parameter not a function");
-			return;
-		}
+// unregister is Deprecated. Please use a tag to flag a user as no longer registered.
+GameThrive.prototype.unregister = function(successCallback, errorCallback, options) {
+	console.log("GameThrive.unregister is deprecated and no longer does anything. Please use a tag to flag a user as no longer registered.");
+};
 
-		if (typeof successCallback != "function") {
-			console.log("GameThrive.setApplicationIconBadgeNumber failure: success callback parameter must be a function");
-			return;
-		}
-
-		cordova.exec(successCallback, successCallback, "PushPlugin", "setApplicationIconBadgeNumber", [{badge: badge}]);
-    };
+// Only applies to iOS(does nothing on Android as it always silently registers)
+// Call only if you passed false to autoRegister
+GameThrive.prototype.registerForPushNotifications = function() {
+    cordova.exec(function(){}, function(){}, "GameThrivePush", "registerForPushNotifications", []);
+}
 
 //-------------------------------------------------------------------
 
 if(!window.plugins) {
-	window.plugins = {};
+    window.plugins = {};
 }
 if (!window.plugins.GameThrive) {
-	window.plugins.GameThrive = new GameThrive();
+    window.plugins.GameThrive = new GameThrive();
+}
+
+if (typeof module != 'undefined' && module.exports) {
+  module.exports = GameThrive;
 }

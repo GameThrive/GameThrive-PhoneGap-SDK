@@ -1,5 +1,9 @@
 /**
  * Copyright 2014 GameThrive
+ * Portions Copyright 2014 StackMob
+ *
+ * This file includes portions from the StackMob iOS SDK and distributed under an Apache 2.0 license.
+ * StackMob was acquired by PayPal and ceased operation on May 22, 2014.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +18,12 @@
  * limitations under the License.
  */
 
-package com.gamethrive;
+@interface GTHTTPClient : NSObject
 
-import android.content.Context;
+@property (readonly, nonatomic) NSURL *baseURL;
 
-interface AdvertisingIdentifierProvider {
-	String getIdentifier(Context context);
-}
+- (id)initWithBaseURL:(NSURL *)url;
+
+- (NSMutableURLRequest*) requestWithMethod:(NSString*)method
+                                      path:(NSString*)path;
+@end

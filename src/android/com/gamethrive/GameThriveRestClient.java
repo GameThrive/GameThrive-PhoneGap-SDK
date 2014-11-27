@@ -32,7 +32,7 @@ import com.loopj.android.http.*;
 //    Looper.prepare() which can have unexpected results on the current thread.
 
 class GameThriveRestClient {
-  private static final String BASE_URL = "http://10.0.1.233:3000/api/v1/";
+  private static final String BASE_URL = "https://gamethrive.com/api/v1/";
   private static final int TIMEOUT = 20000;
   
   private static SyncHttpClient clientSync = new SyncHttpClient();
