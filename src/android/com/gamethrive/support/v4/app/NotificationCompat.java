@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.support.v4.app;
+package com.gamethrive.support.v4.app;
 
 import android.app.Notification;
 import android.app.NotificationManager;

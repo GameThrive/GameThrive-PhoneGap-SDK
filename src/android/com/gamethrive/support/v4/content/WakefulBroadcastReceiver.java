@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.support.v4.content;
+package com.gamethrive.support.v4.content;
 
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;

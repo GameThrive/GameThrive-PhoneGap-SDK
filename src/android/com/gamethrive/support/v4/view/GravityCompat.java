@@ -15,7 +15,7 @@
  */
 
 
-package android.support.v4.view;
+package com.gamethrive.support.v4.view;
 
 import android.graphics.Rect;
 import android.os.Build;

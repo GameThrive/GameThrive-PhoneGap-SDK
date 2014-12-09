@@ -1,24 +1,36 @@
 /**
- * Copyright 2014 GameThrive
- * Portions Copyright 2013 Google Inc.
+ * Modified MIT License
  * 
+ * Copyright 2014 GameThrive
+ * 
+ * Portions Copyright 2013 Google Inc.
  * This file includes portions from the Google GcmClient demo project
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * 1. The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * 2. All copies of substantial portions of the Software may only be used in connection
+ * with services provided by GameThrive.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
 package com.gamethrive;
 
+import java.net.URL;
 import java.util.Random;
 
 import org.json.JSONArray;
@@ -33,9 +45,11 @@ import android.app.PendingIntent;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v4.app.NotificationCompat;
+import com.gamethrive.support.v4.app.NotificationCompat;
 
 /**
  * This {@code IntentService} does the actual handling of the GCM message.
@@ -70,10 +84,10 @@ public class GcmIntentService extends IntentService {
     protected void onHandleIntent(Intent intent) {
         Bundle extras = intent.getExtras();
         
-    	if (isGcmMessage(intent) && !extras.isEmpty()) {
-        	PrepareBundle(extras);
-        	
-        	// If GameThrive has been initialized and the app is in focus skip the notification creation and handle everything like it was opened. 
+    	if (isGcmMessage(intent) && GameThrive.isValidAndNotDuplicated(this, extras)) {
+    		PrepareBundle(extras);
+    		
+        	// If GameThrive has been initialized and the app is in focus skip the notification creation and handle everything like it was opened.
     		if (GameThrive.instance != null && GameThrive.instance.isForeground()) {
             	final Bundle finalExtras = extras;
     			// This IntentService is meant to be short lived. Make a new thread to do our GameThrive work on.
@@ -120,6 +134,11 @@ public class GcmIntentService extends IntentService {
 		    		
 		    		button.put("id", buttonId);
 		    		button.put("text", buttonText);
+		    		
+		    		if (button.has("p")) {
+		    			button.put("icon", button.getString("p"));
+		    			button.remove("p");
+		    		}
 		    	}
 		    	
 				additionalDataJSON.put("actionButtons", buttons);
@@ -149,16 +168,7 @@ public class GcmIntentService extends IntentService {
         
         PendingIntent contentIntent = PendingIntent.getActivity(this, intentId, getNewBaseIntent().putExtra("data", gcmBundle), PendingIntent.FLAG_UPDATE_CURRENT);
         
-        int notificationIcon = getResources().getIdentifier("gamethrive_statusbar_icon_default", "drawable", getPackageName());
-        
-        if (notificationIcon == 0)
-        	notificationIcon = getResources().getIdentifier("corona_statusbar_icon_default", "drawable", getPackageName());
-        
-        if (notificationIcon == 0) {
-	        notificationIcon = this.getApplicationInfo().icon;
-	        if (notificationIcon == 0) // Catches case where icon isn't set in the AndroidManifest.xml
-	        	notificationIcon = drawable.sym_def_app_icon;
-        }
+        int notificationIcon = getSmallIconId(gcmBundle);
         
         CharSequence title = gcmBundle.getString("title");
         if (title == null)
@@ -169,11 +179,18 @@ public class GcmIntentService extends IntentService {
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(this)
 	        .setAutoCancel(true)
 	        .setSmallIcon(notificationIcon) // Small Icon required or notification doesn't display
-	        //.setLargeIcon(BitmapFactory.decodeResource(getResources(), getApplicationInfo().icon))
 	        .setContentTitle(title)
 	        .setStyle(new NotificationCompat.BigTextStyle().bigText(gcmBundle.getString("alert")))
 	        .setTicker(gcmBundle.getString("alert"))
 	        .setContentText(gcmBundle.getString("alert"));
+        
+        Bitmap largeIcon = getBitmapIcon(gcmBundle, "licon");
+        if (largeIcon != null)
+        	mBuilder.setLargeIcon(largeIcon);
+        
+        Bitmap bigPictureIcon = getBitmapIcon(gcmBundle, "bicon");
+        if (bigPictureIcon != null)
+        	mBuilder.setStyle(new NotificationCompat.BigPictureStyle().bigPicture(bigPictureIcon).setSummaryText(gcmBundle.getString("alert")));
         
         if (gcmBundle.getString("sound") != null) {
         	int soundId = getResources().getIdentifier(gcmBundle.getString("sound"), "raw", getPackageName());
@@ -210,7 +227,12 @@ public class GcmIntentService extends IntentService {
             			buttonIntent.putExtra("notificationId", notificationId);
             			buttonIntent.putExtra("data", bundle);
             			PendingIntent buttonPIntent = PendingIntent.getActivity(this, notificationId, buttonIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-            			mBuilder.addAction(0, button.getString("text"), buttonPIntent);
+            			
+            			int buttonIcon = 0;
+            			if (button.has("icon"))
+            				buttonIcon = getResourceIcon(button.getString("icon"));
+            			
+            			mBuilder.addAction(buttonIcon, button.getString("text"), buttonPIntent);
             		}
 	        	}
 	        }
@@ -219,5 +241,58 @@ public class GcmIntentService extends IntentService {
 		}
 		
         mNotificationManager.notify(notificationId, mBuilder.build());
+    }
+    
+    private Bitmap getBitmapIcon(Bundle gcmBundle, String key) {
+    	if (gcmBundle.containsKey(key)) {
+    		String largeIcon = gcmBundle.getString(key);
+    		if (largeIcon.startsWith("http://") || largeIcon.startsWith("https://")) {
+				try {
+					return BitmapFactory.decodeStream(new URL(largeIcon).openConnection().getInputStream());
+				} catch (Throwable t) {
+					return null;
+				}
+    		}
+			else
+    			return BitmapFactory.decodeResource(getResources(), getResources().getIdentifier(largeIcon, "drawable", getPackageName()));
+    	}
+    	
+    	return null;
+    }
+    
+    private int getResourceIcon(String iconName) {
+    	int notificationIcon = getResources().getIdentifier(iconName, "drawable", getPackageName());
+    	if (notificationIcon != 0)
+    		return notificationIcon;
+    	
+		try {
+			return drawable.class.getField(iconName).getInt(null);
+		} catch (Throwable t) {}
+		
+		return 0;
+    }
+    
+    private int getSmallIconId(Bundle gcmBundle) {
+        int notificationIcon = 0;
+        
+        if (gcmBundle.containsKey("sicon")) {
+        	notificationIcon = getResourceIcon(gcmBundle.getString("sicon"));
+        	if (notificationIcon != 0)
+        		return notificationIcon;
+        }
+        
+        notificationIcon = getResources().getIdentifier("gamethrive_statusbar_icon_default", "drawable", getPackageName());
+        if (notificationIcon != 0)
+    		return notificationIcon;
+        
+        notificationIcon = getResources().getIdentifier("corona_statusbar_icon_default", "drawable", getPackageName());
+        if (notificationIcon != 0)
+    		return notificationIcon;
+        
+	    notificationIcon = this.getApplicationInfo().icon;
+        if (notificationIcon != 0)
+    		return notificationIcon;
+        
+        return drawable.sym_def_app_icon; // Catches case where icon isn't set in the AndroidManifest.xml
     }
 }

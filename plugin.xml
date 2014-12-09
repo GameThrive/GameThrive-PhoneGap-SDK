@@ -2,7 +2,7 @@
 <plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
 		xmlns:android="http://schemas.android.com/apk/res/android"
 		id="com.gamethrive.plugins.GameThrive"
-		version="1.1.0">
+		version="1.2.0">
 
 	<name>GameThrive Push Notifications</name>
 	<author>Josh Kasten</author>
@@ -13,7 +13,7 @@
 
 	<keywords>push,notification,push notification,push notifications,apns,gcm,retention,messaging,</keywords>
 
-	<license>Apache 2.0</license>
+	<license>MIT</license>
 
 	<js-module src="www/GameThrive.js" name="GameThrive">
 		<clobbers target="GameThrive" />
@@ -55,16 +55,16 @@
 			<service android:name="com.gamethrive.GcmIntentService" />
 		</config-file>
 		
-		<source-file src="src/android/android/support/v4/app/NotificationCompat.java" target-dir="src/android/android/support/v4/app/" />
-		<source-file src="src/android/android/support/v4/app/NotificationCompatHoneycomb.java" target-dir="src/android/android/support/v4/app/" />
-		<source-file src="src/android/android/support/v4/app/NotificationCompatIceCreamSandwich.java" target-dir="src/android/android/support/v4/app/" />
-		<source-file src="src/android/android/support/v4/app/NotificationCompatJellybean.java" target-dir="src/android/android/support/v4/app/" />
-		<source-file src="src/android/android/support/v4/app/NotificationCompatGingerbread.java" target-dir="src/android/android/support/v4/app/" />
+		<source-file src="src/android/com/gamethrive/support/v4/app/NotificationCompat.java" target-dir="src/android/android/support/v4/app/" />
+		<source-file src="src/android/com/gamethrive/support/v4/app/NotificationCompatHoneycomb.java" target-dir="src/android/android/support/v4/app/" />
+		<source-file src="src/android/com/gamethrive/support/v4/app/NotificationCompatIceCreamSandwich.java" target-dir="src/android/android/support/v4/app/" />
+		<source-file src="src/android/com/gamethrive/support/v4/app/NotificationCompatJellybean.java" target-dir="src/android/android/support/v4/app/" />
+		<source-file src="src/android/com/gamethrive/support/v4/app/NotificationCompatGingerbread.java" target-dir="src/android/android/support/v4/app/" />
 		
-		<source-file src="src/android/android/support/v4/view/GravityCompat.java" target-dir="src/android/android/support/v4/view/" />
-		<source-file src="src/android/android/support/v4/view/GravityCompatJellybeanMr1.java" target-dir="src/android/android/support/v4/view/" />
+		<source-file src="src/android/com/gamethrive/support/v4/view/GravityCompat.java" target-dir="src/android/android/support/v4/view/" />
+		<source-file src="src/android/com/gamethrive/support/v4/view/GravityCompatJellybeanMr1.java" target-dir="src/android/android/support/v4/view/" />
 		
-		<source-file src="src/android/android/support/v4/content/WakefulBroadcastReceiver.java" target-dir="src/android/android/support/v4/content/" />
+		<source-file src="src/android/com/gamethrive/support/v4/content/WakefulBroadcastReceiver.java" target-dir="src/android/android/support/v4/content/" />
 		
 		
 		<source-file src="src/android/com/gamethrive/AdvertisingIdProviderFallback.java" target-dir="src/android/com/gamethrive/" />

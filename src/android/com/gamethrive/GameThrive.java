@@ -1,20 +1,28 @@
 /**
- * Copyright 2014 GameThrive
- * Portions Copyright 2013 Google Inc.
+ * Modified MIT License
  * 
- * This file includes portions from the Google GcmClient demo project
+ * Copyright 2014 GameThrive
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * 1. The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * 2. All copies of substantial portions of the Software may only be used in connection
+ * with services provided by GameThrive.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
  */
 
 package com.gamethrive;
@@ -25,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Locale;
 
 import org.apache.http.Header;
@@ -77,8 +86,8 @@ public class GameThrive {
 	private static String lastNotificationIdOpenned;
 	private TrackPlayerPurchase trackPurchase;
 	
-	public static final int VERSION = 010403;
-	public static final String STRING_VERSION = "010403";
+	public static final int VERSION = 010500;
+	public static final String STRING_VERSION = "010500";
 	
 	private PushRegistrator pushRegistrator = new PushRegistratorGPSAlt();
 	private AdvertisingIdentifierProvider mainAdIdProvider = new AdvertisingIdProviderGPSAlt();
@@ -405,12 +414,10 @@ public class GameThrive {
     private void runNotificationOpenedCallback(final Bundle data, final boolean isActive, boolean isUiThread) {
     	try {
     		 JSONObject customJSON = new JSONObject(data.getString("custom"));
-    		 JSONObject additionalDataJSON;
+    		 JSONObject additionalDataJSON = null;
     		 
     		 if (customJSON.has("a"))
     			 additionalDataJSON = customJSON.getJSONObject("a");
-    		 else
-    			 additionalDataJSON = null;
     		 
     		 if (data.containsKey("title")) {
     			 if (additionalDataJSON == null)
@@ -421,7 +428,7 @@ public class GameThrive {
     		 if (!isActive && customJSON.has("u")) {
     			 String url = customJSON.getString("u");
 				 if (!url.startsWith("http://") && !url.startsWith("https://"))
-					   url = "http://" + url;
+					 url = "http://" + url;
     			 Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
     			 appContext.startActivity(browserIntent);
     		 }
@@ -445,14 +452,13 @@ public class GameThrive {
 		}
     }
     
-    
     // Called when receiving GCM message when app is open and in focus.
     void handleNotificationOpened(Bundle data) {
     	sendNotificationOpened(appContext, data);
     	runNotificationOpenedCallback(data, true, false);
     }
     
-    // Call from tapping on a Notification from the status bar when the app is suspended in the background.
+    // Called when opening a notification when the app is suspended in the background.
     static void handleNotificationOpened(Context inContext, Bundle data) {
     	sendNotificationOpened(inContext, data);
     	
@@ -545,8 +551,80 @@ public class GameThrive {
         editor.putString("GT_REGISTRATION_ID", registartionId);
         editor.commit();
 	}
-    
-    private static SharedPreferences getGcmPreferences(Context context) {
+	
+    static SharedPreferences getGcmPreferences(Context context) {
         return context.getSharedPreferences(GameThrive.class.getSimpleName(), Context.MODE_PRIVATE);
+    }
+	
+	private static LinkedList<String> notificationsReceivedStack;
+	
+	private static void GetNotificationsReceived(Context context) {
+		if (notificationsReceivedStack == null) {
+			notificationsReceivedStack = new LinkedList<String>();
+			
+			final SharedPreferences prefs = getGcmPreferences(context);
+    		String jsonListStr = prefs.getString("GT_RECEIVED_NOTIFICATION_LIST", null);
+    		
+    		if (jsonListStr != null) {
+    			try {
+    				JSONArray notificationsReceivedList = new JSONArray(jsonListStr);
+    				for (int i = 0; i < notificationsReceivedList.length(); i++)
+    					notificationsReceivedStack.push(notificationsReceivedList.getString(i));
+    			} catch (JSONException e) {
+    				e.printStackTrace();
+    			}
+    		}
+		}
+	}
+	
+	private static void AddNotificationIdToList(String id, Context context) {
+		GetNotificationsReceived(context);
+		if (notificationsReceivedStack == null)
+			return;
+		
+		if (notificationsReceivedStack.size() >= 10)
+			notificationsReceivedStack.removeLast();
+		
+		notificationsReceivedStack.addFirst(id);
+		
+		JSONArray jsonArray = new JSONArray();
+		String notificationId;
+		for(int i = notificationsReceivedStack.size() - 1; i > -1; i--) {
+			notificationId = notificationsReceivedStack.get(i);
+			if (notificationId == null)
+				continue;
+			jsonArray.put(notificationsReceivedStack.get(i));
+		}
+		
+		final SharedPreferences prefs = getGcmPreferences(context);
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putString("GT_RECEIVED_NOTIFICATION_LIST", jsonArray.toString());
+        editor.commit();
+	}
+	
+	static boolean isDuplicateNotification(String id, Context context) {
+		GetNotificationsReceived(context);
+		if (notificationsReceivedStack == null || id == null || "".equals(id))
+			return false;
+		
+		if (notificationsReceivedStack.contains(id))
+			return true;
+		
+		AddNotificationIdToList(id, context);
+		return false;
+	}
+	
+    static boolean isValidAndNotDuplicated(Context context, Bundle bundle) {
+    	if (bundle.isEmpty())
+    		return false;
+    	
+    	try {
+    		JSONObject customJSON = new JSONObject(bundle.getString("custom"));
+    		return !GameThrive.isDuplicateNotification(customJSON.getString("i"), context);
+    	} catch (Throwable t) {
+    		t.printStackTrace();
+    	}
+    	
+		return false;
     }
 }
