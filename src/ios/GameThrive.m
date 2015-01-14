@@ -73,7 +73,10 @@ GTTrackPlayerPurchase* trackPlayerPurchase;
 
 bool registeredWithApple = false; // Has attempted to register for push notifications with Apple.
 bool gameThriveReg = false;
+bool waitingForGtReg = false;
 NSNumber* lastTrackedTime;
+NSNumber* unSentActiveTime;
+NSNumber* timeToPingWith;
 int mNotificationTypes = -1;
 
 - (id)initWithLaunchOptions:(NSDictionary*)launchOptions {
@@ -96,7 +99,10 @@ int mNotificationTypes = -1;
     self = [super init];
     
     if (self) {
+        
         handleNotification = callback;
+        unSentActiveTime = [NSNumber numberWithInteger:-1];
+
         lastTrackedTime = [NSNumber numberWithLongLong:[[NSDate date] timeIntervalSince1970]];
         
         if (appId)
@@ -181,9 +187,7 @@ int mNotificationTypes = -1;
 }
 
 - (void)registerDeviceToken:(id)inDeviceToken onSuccess:(GTResultSuccessBlock)successBlock onFailure:(GTFailureBlock)failureBlock {
-    NSString* deviceToken = [[inDeviceToken description] stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"<>"]];
-    
-    [self updateDeviceToken:[[deviceToken componentsSeparatedByString:@" "] componentsJoinedByString:@""] onSuccess:successBlock onFailure:failureBlock];
+    [self updateDeviceToken:inDeviceToken onSuccess:successBlock onFailure:failureBlock];
     
     NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
     [defaults setObject:mDeviceToken forKey:@"GT_DEVICE_TOKEN"];
@@ -198,8 +202,9 @@ int mNotificationTypes = -1;
         tokenUpdateFailureBlock = failureBlock;
         
         // iOS 8 - We get a token right away but give the user 30 sec to responsed to the system prompt.
+        // Also check mNotificationTypes so there is no waiting if user has already answered the system prompt.
         // The goal is to only have 1 server call.
-        if (isCapableOfGettingNotificationTypes()) {
+        if (isCapableOfGettingNotificationTypes() && mNotificationTypes == -1) {
             [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(registerPlayer) object:nil];
             [self performSelector:@selector(registerPlayer) withObject:nil afterDelay:30.0f];
         }
@@ -256,10 +261,10 @@ int mNotificationTypes = -1;
 
 - (void)registerPlayer {
     // Make sure we only call create or on_session once per run of the app.
-    if (gameThriveReg)
+    if (gameThriveReg || waitingForGtReg)
         return;
     
-    gameThriveReg = true;
+    waitingForGtReg = true;
     
     NSMutableURLRequest* request;
     if (mPlayerId == nil)
@@ -280,7 +285,7 @@ int mNotificationTypes = -1;
                              [NSNumber numberWithInt:0], @"device_type",
                              [[[UIDevice currentDevice] identifierForVendor] UUIDString], @"ad_id",
                              [self getSoundFiles], @"sounds",
-                             @"010603", @"sdk",
+                             @"010606", @"sdk",
                              mDeviceToken, @"identifier", // identifier MUST be at the end as it could be nil.
                              nil];
     
@@ -296,6 +301,8 @@ int mNotificationTypes = -1;
     [request setHTTPBody:postData];
     
     [self enqueueRequest:request onSuccess:^(NSDictionary* results) {
+        gameThriveReg = true;
+        waitingForGtReg = false;
         if ([results objectForKey:@"id"] != nil) {
             NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
             mPlayerId = [results objectForKey:@"id"];
@@ -317,6 +324,8 @@ int mNotificationTypes = -1;
             }
         }
     } onFailure:^(NSError* error) {
+        gameThriveReg = false;
+        waitingForGtReg = false;
         NSLog(@"Error registering with GameThrive: %@", error);
     }];
 }
@@ -469,6 +478,21 @@ NSString* getUsableDeviceToken() {
         [self sendNotificationTypesUpdateIsConfirmed:false];
         wasBadgeSet = clearBadgeCount();
     }
+    else {
+        NSNumber* timeElapsed = @(([[NSDate date] timeIntervalSince1970] - [lastTrackedTime longLongValue]) + 0.5);
+        if ([timeElapsed intValue] < 0 || [timeElapsed intValue] > 604800)
+            return;
+        
+        NSNumber* unSentActiveTime = [self getUnsentActiveTime];
+        NSNumber* totalTimeActive = @([unSentActiveTime intValue] + [timeElapsed intValue]);
+        
+        if ([totalTimeActive intValue] < 30) {
+            [self saveUnsentActiveTime:totalTimeActive];
+            return;
+        }
+        
+        timeToPingWith = totalTimeActive;
+    }
     
     if (mPlayerId == nil)
         return;
@@ -491,18 +515,17 @@ NSString* getUsableDeviceToken() {
     
     // Update the playtime on the server when the app put into the background or the device goes to sleep mode.
     if ([state isEqualToString:@"suspend"]) {
+        [self saveUnsentActiveTime:0];
         dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
             [self beginBackgroundFocusTask];
         
-            NSNumber* timeElapsed = @(([[NSDate date] timeIntervalSince1970] - [lastTrackedTime longLongValue]) + 0.5);
-            timeElapsed = [NSNumber numberWithLongLong: [timeElapsed longLongValue]];
-            lastTrackedTime = [NSNumber numberWithLongLong:[[NSDate date] timeIntervalSince1970]];
+            
             
             NSMutableURLRequest* request = [self.httpClient requestWithMethod:@"POST" path:[NSString stringWithFormat:@"players/%@/on_focus", mPlayerId]];
             NSDictionary* dataDic = [NSDictionary dictionaryWithObjectsAndKeys:
                                      self.app_id, @"app_id",
                                      @"ping", @"state",
-                                     timeElapsed, @"active_time",
+                                     timeToPingWith, @"active_time",
                                      nil];
             
             NSData* postData = [NSJSONSerialization dataWithJSONObject:dataDic options:0 error:nil];
@@ -516,6 +539,25 @@ NSString* getUsableDeviceToken() {
             [self endBackgroundFocusTask];
         });
     }
+}
+
+- (NSNumber*)getUnsentActiveTime {
+    if ([unSentActiveTime intValue] == -1) {
+        NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
+        unSentActiveTime = [defaults objectForKey:@"GT_UNSENT_ACTIVE_TIME"];
+        if (unSentActiveTime == nil)
+            unSentActiveTime = 0;
+    }
+    
+    return unSentActiveTime;
+}
+
+- (void)saveUnsentActiveTime:(NSNumber*)time {
+    unSentActiveTime = time;
+    NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
+    [defaults setObject:time forKey:@"GT_UNSENT_ACTIVE_TIME"];
+    [defaults synchronize];
+
 }
 
 - (void)sendPurchases:(NSArray*)purchases {
@@ -607,12 +649,13 @@ int getNotificationTypes() {
     return -1;
 }
 
+// iOS 8.0+ only
 - (void) updateNotificationTypes:(int)notificationTypes {
     BOOL changed = (mNotificationTypes != notificationTypes);
     
     mNotificationTypes = notificationTypes;
     
-    if (mPlayerId == nil)
+    if (mPlayerId == nil && mDeviceToken)
         [self registerPlayer];
     else if (mDeviceToken)
         [self sendNotificationTypesUpdateIsConfirmed:changed];
@@ -701,6 +744,23 @@ int getNotificationTypes() {
 @end
 
 
+
+
+static Class getClassWithProtocolInHierarchy(Class searchClass, Protocol* protocolToFind) {
+    if (!class_conformsToProtocol(searchClass, protocolToFind)) {
+        if ([searchClass superclass] == [NSObject class])
+            return nil;
+        
+        Class foundClass = getClassWithProtocolInHierarchy([searchClass superclass], protocolToFind);
+        if (foundClass)
+            return foundClass;
+        
+        return searchClass;
+    }
+    
+    return searchClass;
+}
+
 static void injectSelector(Class newClass, SEL newSel, Class addToClass, SEL makeLikeSel) {
     Method newMeth = class_getInstanceMethod(newClass, newSel);
     IMP imp = method_getImplementation(newMeth);
@@ -718,18 +778,21 @@ static void injectSelector(Class newClass, SEL newSel, Class addToClass, SEL mak
 }
 
 
+
 @implementation UIApplication(GameThrivePush)
 
-- (void)gameThriveDidRegisterForRemoteNotifications:(UIApplication*)app deviceToken:(NSData*)deviceToken {
-    NSLog(@"Device Registered with Apple.");
-    [[GameThrive defaultClient] registerDeviceToken:deviceToken onSuccess:^(NSDictionary* results) {
-        NSLog(@"Device Registered with GameThrive.");
+- (void)gameThriveDidRegisterForRemoteNotifications:(UIApplication*)app deviceToken:(NSData*)inDeviceToken {
+    NSString* trimmedDeviceToken = [[inDeviceToken description] stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"<>"]];
+    NSString* parsedDeviceToken = [[trimmedDeviceToken componentsSeparatedByString:@" "] componentsJoinedByString:@""];
+    NSLog(@"Device Registered with Apple: %@", parsedDeviceToken);
+    [[GameThrive defaultClient] registerDeviceToken:parsedDeviceToken onSuccess:^(NSDictionary* results) {
+        NSLog(@"Device Registered with GameThrive: %@", mPlayerId);
     } onFailure:^(NSError* error) {
         NSLog(@"Error in GameThrive Registration: %@", error);
     }];
     
     if ([self respondsToSelector:@selector(gameThriveDidRegisterForRemoteNotifications:deviceToken:)])
-        [self gameThriveDidRegisterForRemoteNotifications:app deviceToken:deviceToken];
+        [self gameThriveDidRegisterForRemoteNotifications:app deviceToken:inDeviceToken];
 }
 
 - (void)gameThriveDidFailRegisterForRemoteNotification:(UIApplication*)app error:(NSError*)err {
@@ -866,11 +929,11 @@ static void injectSelector(Class newClass, SEL newSel, Class addToClass, SEL mak
         [self gameThriveApplicationDidBecomeActive:application];
 }
 
+
+
 + (void)load {
     method_exchangeImplementations(class_getInstanceMethod(self, @selector(setDelegate:)), class_getInstanceMethod(self, @selector(setGameThriveDelegate:)));
 }
-
-
 
 static Class delegateClass = nil;
 
@@ -879,7 +942,8 @@ static Class delegateClass = nil;
 	if(delegateClass != nil)
 		return;
     
-	delegateClass = [delegate class];
+	delegateClass = getClassWithProtocolInHierarchy([delegate class], @protocol(UIApplicationDelegate));
+    
     
     injectSelector(self.class, @selector(gameThriveReceivedRemoteNotification:userInfo:),
                    delegateClass, @selector(application:didReceiveRemoteNotification:));
