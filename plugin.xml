@@ -11,7 +11,7 @@
 		GameThrive is a high volume Push Notification service for mobile apps. In addition to basic notification delivery, GameThrive also provides tools to localize, target, schedule, and automate notifications that you send.
 	</description>
 
-	<keywords>push,notification,push notification,push notifications,apns,gcm,retention,messaging,</keywords>
+	<keywords>push,notification,push notification,push notifications,apns,gcm,adm,retention,messaging</keywords>
 
 	<license>MIT</license>
 
