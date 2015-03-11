@@ -57,21 +57,21 @@ GameThrive.prototype.deleteTags = function(keys) {
     cordova.exec(function(){}, function(){}, "GameThrivePush", "deleteTags", keys);
 };
 
-// register is deprecated, must use init instead.
-GameThrive.prototype.register = function(successCallback, errorCallback, options) {
-    console.log("GameThrive.register is deprecated, must use init instead.");
-};
-
-// unregister is Deprecated. Please use a tag to flag a user as no longer registered.
-GameThrive.prototype.unregister = function(successCallback, errorCallback, options) {
-    console.log("GameThrive.unregister is deprecated and no longer does anything. Please use a tag to flag a user as no longer registered.");
-};
-
 // Only applies to iOS(does nothing on Android as it always silently registers)
 // Call only if you passed false to autoRegister
 GameThrive.prototype.registerForPushNotifications = function() {
     cordova.exec(function(){}, function(){}, "GameThrivePush", "registerForPushNotifications", []);
-}
+};
+
+// Only applies to Android, vibrate is on by default but can be disabled by passing in false.
+GameThrive.prototype.enableVibrate = function(enable) {
+    cordova.exec(function(){}, function(){}, "GameThrivePush", "enableVibrate", [enable]);
+};
+
+// Only applies to Android, sound is on by default but can be disabled by passing in false.
+GameThrive.prototype.enableSound = function(enable) {
+    cordova.exec(function(){}, function(){}, "GameThrivePush", "enableSound", [enable]);
+};
 
 //-------------------------------------------------------------------
 

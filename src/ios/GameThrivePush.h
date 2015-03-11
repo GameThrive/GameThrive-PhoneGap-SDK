@@ -27,4 +27,8 @@
 - (void)deleteTags:(CDVInvokedUrlCommand*)command;
 - (void)registerForPushNotifications:(CDVInvokedUrlCommand*)command;
 
+// Android Only
+- (void)enableVibrate:(CDVInvokedUrlCommand*)command;
+- (void)enableSound:(CDVInvokedUrlCommand*)command;
+
 @end

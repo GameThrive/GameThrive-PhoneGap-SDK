@@ -2,7 +2,7 @@
 <plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
 		xmlns:android="http://schemas.android.com/apk/res/android"
 		id="com.gamethrive.plugins.GameThrive"
-		version="1.3.0">
+		version="1.4.0">
 
 	<name>GameThrive Push Notifications</name>
 	<author>Josh Kasten</author>
@@ -87,6 +87,8 @@
 			</feature>
 		</config-file>
 
+		<framework src="SystemConfiguration.framework" />
+
 		<config-file target="*-Info.plist" parent="UIBackgroundModes">
             <array>
                 <string>remote-notification</string>
@@ -98,12 +100,14 @@
 		<source-file src="src/ios/GTTrackPlayerPurchase.m" />
 		<source-file src="src/ios/HGTJailbreakDetection.m" />
 		<source-file src="src/ios/GameThrivePush.m" />
+		<source-file src="src/ios/HGTReachability.m" />
 
 		<header-file src="src/ios/GameThrive.h" />
 		<header-file src="src/ios/GTHTTPClient.h" />
 		<header-file src="src/ios/GTTrackPlayerPurchase.h" />
 		<header-file src="src/ios/HGTJailbreakDetection.h" />
 		<header-file src="src/ios/GameThrivePush.h" />
+		<header-file src="src/ios/HGTReachability.h" />
 
 	</platform>
 

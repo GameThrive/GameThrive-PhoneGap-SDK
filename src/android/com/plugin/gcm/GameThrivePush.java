@@ -46,6 +46,8 @@ public class GameThrivePush extends CordovaPlugin {
 	public static final String DELETE_TAGS = "deleteTags";
 	public static final String SEND_TAGS = "sendTags";
 	public static final String REGISTER_FOR_PUSH_NOTIFICATIONS = "registerForPushNotifications";
+	public static final String ENABLE_VIBRATE = "enableVibrate";
+	public static final String ENABLE_SOUND = "enableSound";
 	
 	private static GameThrive gameThrive;
 	
@@ -151,6 +153,24 @@ public class GameThrivePush extends CordovaPlugin {
 		else if (REGISTER_FOR_PUSH_NOTIFICATIONS.equals(action)) {
 			// Does not apply to Android.
 			result = true;
+		}
+		else if (ENABLE_VIBRATE.equals(action)) {
+			if (gameThrive != null) {
+				try {
+					gameThrive.enableVibrate(data.getBoolean(0));
+				} catch (Throwable t) {
+					t.printStackTrace();
+				}
+			}
+		}
+		else if (ENABLE_SOUND.equals(action)) {
+			if (gameThrive != null) {
+				try {
+					gameThrive.enableSound(data.getBoolean(0));
+				} catch (Throwable t) {
+					t.printStackTrace();
+				}
+			}
 		}
 		else {
 			result = false;

@@ -149,4 +149,8 @@ static Class delegateClass = nil;
     [gameThrive registerForPushNotifications];
 }
 
+// Android only
+- (void)enableVibrate:(CDVInvokedUrlCommand*)command {}
+- (void)enableSound:(CDVInvokedUrlCommand*)command {}
+
 @end
